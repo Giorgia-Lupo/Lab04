@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,6 +34,10 @@ public class CorsoDAO {
 				int numeroCrediti = rs.getInt("crediti");
 				String nome = rs.getString("nome");
 				int periodoDidattico = rs.getInt("pd");
+				
+				Corso c = new Corso(codins, numeroCrediti, nome, periodoDidattico);
+				corsi.add(c);
+			
 
 				System.out.println(codins + " " + numeroCrediti + " " + nome + " " + periodoDidattico);
 
@@ -56,21 +61,88 @@ public class CorsoDAO {
 	 * Dato un codice insegnamento, ottengo il corso
 	 */
 	public void getCorso(Corso corso) {
-		// TODO
+	}
+		
+	public List<Corso> getCorsiDiUnoStudente (Studente stud) {
+		String sql = "SELECT c.codins, c.crediti, c.nome, c.pd FROM studente AS s, corso AS c, "+
+							"iscrizione i WHERE c.codins=i.codins AND s.matricola=i.matricola AND s.matricola=?";
+		
+		List<Corso> corsiDiUnoStudente = new ArrayList<>();
+		
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			st.setInt(1, stud.getMatricola());
+			ResultSet r = st.executeQuery();
+			
+			while(r.next()) {
+				Corso ci = new Corso(r.getString("codins"), r.getInt("crediti"), r.getString("nome"), r.getInt("pd"));
+				corsiDiUnoStudente.add(ci);
+			}
+			
+		}catch(SQLException e) {
+			throw new RuntimeException(e);
+		}
+		
+		return corsiDiUnoStudente;
 	}
 
 	/*
 	 * Ottengo tutti gli studenti iscritti al Corso
 	 */
-	public void getStudentiIscrittiAlCorso(Corso corso) {
-		// TODO
+	public List<Studente> getStudentiIscrittiAlCorso(Corso corso) {
+		String sql="SELECT s.matricola, s.cognome, s.nome, s.CDS FROM iscrizione AS i, corso AS c, "+
+						" studente AS s WHERE c.codins=i.codins AND s.matricola=i.matricola AND c.codins=?";
+		
+		List<Studente> studentiIscritti = new ArrayList();
+		
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			st.setString(1, corso.getCodins());
+			ResultSet res = st.executeQuery();
+			
+			while(res.next()) {
+				Studente s = new Studente(res.getInt("matricola"), res.getString("cognome"), 
+											res.getString("nome"), res.getString("CDS"));
+				studentiIscritti.add(s);
+			}
+			conn.close();			
+			
+		}catch (SQLException e){
+			throw new RuntimeException(e);
+		}
+		
+		return studentiIscritti;		
 	}
 
 	/*
 	 * Data una matricola ed il codice insegnamento, iscrivi lo studente al corso.
 	 */
 	public boolean inscriviStudenteACorso(Studente studente, Corso corso) {
-		// TODO
+		 
+		String sql = "INSERT INTO iscrizione (matricola, codins) VALUE (?,?)";
+		
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			st.setInt(1,studente.getMatricola());
+			st.setString(2, corso.getCodins());
+			
+			Integer rs = st.executeUpdate();
+			
+			if(rs==1) {
+				return true;
+			}
+			
+			
+		}catch(SQLException e) {
+			throw new RuntimeException(e);
+		}
+	
 		// ritorna true se l'iscrizione e' avvenuta con successo
 		return false;
 	}
